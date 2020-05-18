@@ -11,3 +11,12 @@ It's designed to connect to the rear of a module panel at 90 degrees, via the po
 
 The Arduino, voltage reference and power ICs are all connected via the PCB.
 The PCB should also be useful for 100% analogue modules too.
+
+
+**UPDATE 18th May**
+
+- Uploaded Arduino board without 3V3 supply, with option to break out SCK and MOSI to the central rails
+- Uploaded STM32 blue pill based board
+- Created MIDI daughter board, fitting behind 2 jacks that can be screwed into a front panel
+- Uploaded .zip files containing gerber and excellon files, that are ready for CAM
+- All this is still **UNTESTED!**
