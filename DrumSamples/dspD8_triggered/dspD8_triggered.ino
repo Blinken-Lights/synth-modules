@@ -31,8 +31,8 @@
 
 const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
-byte inputs[6] = { 2, 3, 4, 5, 6, 7 }; // could add , 8, 9 here..
-bool prevInputStates[6] = { false, false, false, false, false, false }; // and increase this array size to 8
+byte inputs[8] = { 2, 3, 4, 5, 6, 7, 8, 9 };
+bool prevInputStates[8] = { false, false, false, false, false, false, false, false }; // and increase this array size to 8
 
 //--------- Ringbuf parameters ----------
 uint8_t Ringbuffer[256];
@@ -60,7 +60,7 @@ void setup()
 {
 	OSCCAL=0xFF;
 
-	for(byte i = 0; i < 6; i++){
+	for(byte i = 0; i < 8; i++){
     pinMode(inputs[i], INPUT);
   }
 
@@ -122,11 +122,6 @@ void setup()
 	ADCSRA |= PS_128;
 	ADMUX = 64;
 	sbi(ADCSRA, ADSC);
-
-	Serial.begin(9600);
-	Serial.println("Modified [Jan Ostman] dsp-D8:");
-	Serial.println("https://janostman.wordpress.com/the-dsp-d8-drum-chip-source-code/");
-	Serial.println("Press asdfjkl; to play the drums.");
 
 	sei();
 }
@@ -255,8 +250,8 @@ void loop()
 
 	//----------------- Handle Triggers ------------------------------
 
-  bool triggered[6];
-  for(byte i = 0; i < 6; i++){
+  bool triggered[8];
+  for(byte i = 0; i < 8; i++){
     bool currentInputState = opt_read(inputs[i]);
     triggered[i] = (currentInputState && !prevInputStates[i]);
     prevInputStates[i] = currentInputState;
@@ -286,14 +281,14 @@ void loop()
     samplepntCL=0;
     samplecntCL=2384;
   }
-  /*if(triggered[6]){ 
+  if(triggered[6]){ 
     samplepntRD=0;
     samplecntRD=5066;
   }
   if(triggered[7]){ 
     samplepntCR=0;
     samplecntCR=5414;
-  }*/
+  }
 
 	//-----------------------------------------------------------------
 }
