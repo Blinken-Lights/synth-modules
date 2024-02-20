@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "kicad_libraries")(type "KiCad")(uri "/Users/newuser/Documents/kicad_libraries")(options "")(descr ""))
+)
