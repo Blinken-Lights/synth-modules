@@ -3255,7 +3255,7 @@
     (property "Reference" "R7" (at 88.9 144.78 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Value" "10k" (at 88.9 147.32 90)
+    (property "Value" "1k8" (at 88.9 147.32 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" (at 88.9 148.082 90)
