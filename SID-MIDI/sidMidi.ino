@@ -25,7 +25,7 @@ const byte envKnob = 0; // A5
 const byte waveStackKnob = 1; // A6
 const byte pulseWidthKnob = 2; // A7
 
-const byte polyUnisonSwitch0 = 12;
+const byte polyUnisonSwitch0 = 1;
 const byte polyUnisonSwitch1 = 13;
 byte polyUnisonSwitchState = 0;
 bool polyphonic = false;
@@ -49,9 +49,14 @@ byte channelWaves[] = { 1, 1, 1 };
 
 bool portamentoStates[] = { false, false, false };
 byte portamentoTimes[] = { 0, 0, 0 };
-int currentFrequencies[] = { 0, 0, 0 };
-int targetFrequencies[] = { 0, 0, 0 };
-unsigned long lastCheckedPortamento[] = { 0, 0, 0 };
+unsigned int currentFrequencies[] = { 0, 0, 0 };
+unsigned int targetFrequencies[] = { 0, 0, 0 };
+
+bool arpeggioStates[] = { false, false, false };
+byte arpeggioTimes[] = { 0, 0, 0 };
+unsigned int currentNotes[] = { 0, 0, 0 };
+unsigned int targetNotes[] = { 0, 0, 0 };
+unsigned long lastCheckedArpeggios[] = { 0, 0, 0 };
 
 /* Code used to generate these Fn values:
   for(byte n = 0; n < 128; n++){
@@ -84,6 +89,7 @@ unsigned long lastCheckedPortamento[] = { 0, 0, 0 };
 */
 
 const unsigned int note_to_sid[] PROGMEM = { 137,145,153,163,172,183,193,205,217,230,244,258,274,290,307,326,345,366,387,411,435,461,488,517,548,581,615,652,691,732,775,822,871,922,977,1035,1097,1162,1231,1305,1382,1464,1551,1644,1742,1845,1955,2071,2194,2325,2463,2610,2765,2929,3103,3288,3484,3691,3910,4143,4389,4650,4927,5220,5530,5859,6207,6577,6968,7382,7821,8286,8779,9301,9854,10440,11061,11719,12415,13154,13936,14765,15643,16573,17558,18602,19709,20881,22122,23438,24831,26308,27872,29530,31286,33146,35117,37205,39418,41762,44245,46876,49663,52616,55745,59060,62572,33146,35117,37205,39418,41762,44245,46876,49663,52616,55745,59060,62572,33146,35117,37205,39418,41762,44245,46876,49663,52616 };
+// const unsigned int note_to_sid[] PROGMEM = { 137,145,154,163,173,183,194,206,218,231,244,259,274,291,308,326,346,366,388,411,435,461,489,518,549,581,616,652,691,732,776,822,871,923,978,1036,1097,1163,1232,1305,1383,1465,1552,1644,1742,1846,1955,2072,2195,2325,2463,2610,2765,2930,3104,3288,3484,3691,3910,4143,4389,4650,4927,5220,5530,5859,6207,6577,6968,7382,7821,8286,8779,9301,9854,10440,11061,11718,12415,13153,13935,14764,15642,16572,17557,18601,19708,20879,22121,23436,24830,26306,27871,29528,31284,33144,35115,37203,39415,41759,44242,46873,49660,52613,55741,59056,62568,33144,35115,37203,39415,41759,44242,46873,49660,52613,55741,59056,62568,33135,35105,37193,39404,41748,44230,46860,49647 };
 
 // in unison and polyphonic modes, midi channels CCs linked to voices 1, 2, 3 can still change those individual voices
 void handleControlChange(byte channel, byte number, byte value){
@@ -352,10 +358,13 @@ void resetNotes(){
 
 void noteOn(byte sidChannel, byte note, byte velocity){
 
+  targetNotes[sidChannel] = note;
   channelNotes[sidChannel] = note;
+  if(!arpeggioStates[sidChannel]){
+    setMIDINote(channelNotes[sidChannel], sidChannel);
+  }
   channelVelocities[sidChannel] = velocity;
   channelSustains[sidChannel] = channelVelocities[sidChannel] >> 4;
-  setMIDINote(channelNotes[sidChannel], sidChannel);
   updateEnv(sidChannel);
   gateOn(sidChannel);
 
@@ -381,7 +390,7 @@ void setup() {
 
   // data pins
   pinMode(8, OUTPUT);
-  pinMode(1, OUTPUT);
+  pinMode(12, OUTPUT);
   pinMode(2, OUTPUT);
   pinMode(3, OUTPUT);
   pinMode(4, OUTPUT);
@@ -401,10 +410,6 @@ void setup() {
   
   sidWrite(24, modevol_register);
 
-  setFreq(923, 0);
-  setFreq(1845, 1);
-  setFreq(3691, 2);
-
   for(byte i = 0; i < 3; i++){
     updatePW(i);
     updateWave(i);
@@ -413,16 +418,6 @@ void setup() {
 
   pinMode(polyUnisonSwitch0, INPUT_PULLUP);
   pinMode(polyUnisonSwitch1, INPUT_PULLUP);
-
-  /*// debugging..
-  gateOn(0);
-  gateOn(1);
-  gateOn(2);
-  delay(1000);
-  gateOff(0);
-  gateOff(1);
-  gateOff(2);
-  // end debugging ..*/
 
   // to interpret MIDI messages when in separate channels mode
   for(int i = 0; i < 3; i++){
@@ -466,6 +461,8 @@ void loop() {
 
   readKnobs();
 
+  checkArpeggios();
+
   checkPortamentos();
 
 }
@@ -500,21 +497,51 @@ void readKnobs(){
 
 void checkPortamentos(){
 
+  for(byte i = 0; i < 3; i++){
+
+    if(!portamentoStates[i]
+      || currentFrequencies[i] == targetFrequencies[i]){
+      continue;
+    }
+
+    unsigned int newFrequency = 0;
+    if(currentFrequencies[i] > targetFrequencies[i]){
+      newFrequency = currentFrequencies[i] - portamentoTimes[i];
+      if(newFrequency < targetFrequencies[i]){ // catch undershoot
+        newFrequency = targetFrequencies[i];
+      }
+    }else{
+      newFrequency = currentFrequencies[i] + portamentoTimes[i];
+      if(newFrequency > targetFrequencies[i]){ // catch overshoot
+        newFrequency = targetFrequencies[i];
+      }
+    }
+
+    setFreq(newFrequency, i);
+
+  }
+
+}
+
+void checkArpeggios(){
+
   unsigned long m = millis();
 
   for(byte i = 0; i < 3; i++){
 
-    if(!portamentoStates[i]
-      || currentFrequencies[i] == targetFrequencies[i]
-      || m - lastCheckedPortamento[i] < portamentoTimes[i]){
+    if(!arpeggioStates[i]
+      || currentNotes[i] == targetNotes[i]
+      || m - lastCheckedArpeggios[i] < arpeggioTimes[i]){
       continue;
     }
 
-    int newFrequency = (currentFrequencies[i] > targetFrequencies[i]) ? currentFrequencies[i] - 1 : currentFrequencies[i] + 1 ;
+    int newNote = (currentNotes[i] > targetNotes[i]) ? currentNotes[i] - 1 : currentNotes[i] + 1 ;
 
-    setFreq(newFrequency, i);
+    gateOff(i);
+    setMIDINote(newNote, i);
+    gateOn(i);
 
-    lastCheckedPortamento[i] = m;
+    lastCheckedArpeggios[i] = m;
 
   }
 
@@ -548,14 +575,11 @@ void sidWrite(byte addressbyte, byte databyte){
   opt_write(cs, LOW);
   PORTD = databyte;
   bitWrite(PORTB, 0, bitRead(databyte, 0));
+  bitWrite(PORTB, 4, bitRead(databyte, 1));
 
-  //delayMicroseconds(200); // was 2 // set CS LOW
-  //opt_write(cs, LOW);
-  //PORTB &= (~(1 << 2));
-  delayMicroseconds(2); // set CS HIGH again
+  delayMicroseconds(2);
   opt_write(cs, HIGH);
-  delayMicroseconds(2); // set CS HIGH again
-  //PORTB |= (1 << 2);
+  delayMicroseconds(2);
     
 }
 
@@ -591,7 +615,7 @@ void setAllEnvs(int value){
 
 }
 
-void setFreq(int f, byte c){
+void setFreq(unsigned int f, byte c){
   byte reg = c * 7;
   sidWrite(reg,     (f & B11111111));
   sidWrite((reg+1), ((f >> 8) & B11111111));
@@ -599,10 +623,11 @@ void setFreq(int f, byte c){
   currentFrequencies[c] = f;
 }
 
-// TO DO: Can this implement portamento????
 void setMIDINote(byte note, byte sidChannel){
-  int sidNote = pgm_read_word_near(note_to_sid + note);
 
+  unsigned int sidNote = pgm_read_word_near(note_to_sid + note);
+
+  currentNotes[sidChannel] = note;
   targetFrequencies[sidChannel] = sidNote;
 
   if(!portamentoStates[sidChannel]){
@@ -647,7 +672,16 @@ void setWaveStack(int value){
     channelWaves[i] = (permutation >> ((i * 2) + 1)) & B00000011;
     bool sync = (permutation >> 6) & B00000001;
     bool ringmod = ((permutation >> 1) & B00000001) && channelWaves[i] == 0;
-    // portamento could be another flag set here..?
+    bool portamento = (permutation >> 5) & B00000001;
+    bool arpeggio = ((permutation >> 4) & B00000001) && permutation >= 64;
+    setPortamentoState(i, portamento);
+    if(portamento){
+      setPortamentoTime(i, (permutation >> 1));
+    }
+    setArpeggioState(i, arpeggio);
+    if(arpeggio){
+      setArpeggioTime(i, (permutation >> 2));
+    }
     bitWrite(conreg[i], 1, sync);
     bitWrite(conreg[i], 2, ringmod);
     updateWave(i);
@@ -656,13 +690,13 @@ void setWaveStack(int value){
 }
 
 void setPW(int pw, byte c){
-    byte reg = c * 7;
+  byte reg = c * 7;
 
-    byte lowByte =  (pw & B11111111);
-    byte highByte =  ((pw >> 8) & B00001111);
+  byte lowByte =  (pw & B11111111);
+  byte highByte =  ((pw >> 8) & B00001111);
 
-    sidWrite((reg+2), lowByte);
-    sidWrite((reg+3), highByte);
+  sidWrite((reg+2), lowByte);
+  sidWrite((reg+3), highByte);
 }
 
 void updatePW(byte sidChannel){
@@ -686,6 +720,14 @@ void setPortamentoTime(byte sidChannel, byte portamentoTime){
   portamentoTimes[sidChannel] = portamentoTime;
 }
 
+void setArpeggioState(byte sidChannel, bool arpeggioState){
+  arpeggioStates[sidChannel] = arpeggioState;
+}
+
+void setArpeggioTime(byte sidChannel, byte arpeggioTime){
+  arpeggioTimes[sidChannel] = arpeggioTime;
+}
+
 void setFiltermode(bool hp, bool bp, bool lp){
   bitWrite(modevol_register, 4, lp);
   bitWrite(modevol_register, 5, bp);
@@ -705,17 +747,17 @@ void setVolume(byte volume){
 }
 
 void gateOn(byte c){
-    byte reg = c * 7;
-    conreg[c] = conreg[c] | B00000001;
-    
-    sidWrite((reg+4), conreg[c]);
+  byte reg = c * 7;
+  conreg[c] = conreg[c] | B00000001;
+  
+  sidWrite((reg+4), conreg[c]);
 }
 
 void gateOff(byte c){
-    byte reg = c * 7;
-    conreg[c] = conreg[c] & B11111110;
+  byte reg = c * 7;
+  conreg[c] = conreg[c] & B11111110;
 
-    sidWrite((reg+4), conreg[c]);
+  sidWrite((reg+4), conreg[c]);
 }
 
 bool opt_read(byte pin){
