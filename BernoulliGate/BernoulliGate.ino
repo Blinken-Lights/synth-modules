@@ -1,3 +1,9 @@
+// Patching notes:
+// If you turn the knob all the way to the left and patch a square wave into the
+// CV jack, the module can act as a gate re-router / AND gate, where if only a single
+// input goes high, the left output goes high, but if both input and CV go high,
+// the right output goes high.
+
 byte cvPotPins[] = { A7, A6 };
 
 byte cvPins[] = { A5, A4 };
