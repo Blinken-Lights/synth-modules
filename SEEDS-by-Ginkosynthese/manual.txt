@@ -1,0 +1,137 @@
+	"How to make the Seeds bloom"
+
+The Ginkosynthese Seeds module is a simple yet versatile synth-voice module.
+The simplicity makes it a suitable choice when you quickly need a sound in a
+live improvisation setting, or as a basis for a more complex sound. The Seeds
+has its own internal attack-decay envelopes, but if you'd rather use an
+external VCA and your favourite envelope you can use it as a traditional
+oscillator as well. This manual will help you make the most of your Seeds, and
+grow them into something beautiful.
+
+	Selecting a sound.
+
+Turn the "select" knob until the desired sound's number shows. When the shown
+number isn't the number of the currently loaded sound, there will be a dot to
+the lower right of the number. Press the "shift/enter" button to load it; the
+sound will load and the dot will disappear.
+
+0; The original "Grains" sound. Two triangle-wave formant peaks synced by the
+main oscillator. The "mod" knob sets a formant peak.
+1: Triangle wave with asymmetrical wave-wrapping. The "mod" knob sets the
+amount of wave-wrapping.
+2: Super-saw, featuring three detuned saw waves with a PWM feature modulated by
+an LFO.The "Mod" knob controls the LFO rate.
+3: Classic fm; a "carrier" sine wave phase modulated by a second sine. The
+"mod" knob sets the modulator wave's pitch offset.
+4: Saw-wave with hard-sync.
+5: Phase-distortion.
+6: Tuned noise.
+7: Square wave with pulse-width modulation and build in LFO. The "mod" knob
+controls the LFO rate.
+8: Two ring-modulating sines, with one hard-synced and sweeping. The "mod"
+knob controls a wave-wrapper.
+
+
+
+	Connections
+
+Out; There is a single output jack that carries the generated sound. Please
+note that while the Seeds can act as an instrument on it's own, it's not
+recommended to connect it straight to your amplifier; Eurorack signals are a
+lot more "hot" than normal line signals. Please use a mixer or attenuator.
+
+Pitch; Sets the main pitch. Calibrated to cover 5 octaves over the 0-5V range.
+
+Gate; Gates and triggers notes. While receiving a gate signal a red led will
+light up above this input to show you what is going on in your patch. This
+input is normalised to +5V, so when you leave it unconnected the Seeds will
+act as an oscillator.
+
+Decay; Sets the decay of the sound; how long the sound takes to die out
+after the gate signal ends.
+
+Mod; Modulates the timbre of the sound. The effect of this depends on the
+sound currently selected.
+
+
+	Main Knobs
+
+The three large knobs all have two functions, as labelled on the panel. To
+access the secondary function press and hold the "Shift/Enter" button for a
+few seconds. The display will read "-". This means the shift mode is
+activated, allowing you to adjust some extra settings. When you are done, let
+go of the shift button. The display will go back to showing the number of the
+selected sound and the knobs will function normally again.
+
+Tune; tunes the main pitch within a range of one octave.
+Quantize; while shift is held this knob turns pitch quantization on and off.
+In the upper (right hand) range of the knob quantisation is on and the only
+pitches the Seeds will output will be quantised to a traditional chromatic
+scale. When set to the left side no quantisation is used and you can get
+continuous glides between notes if you so desire. Note that quantisation
+doesn't cover the "Tune" functionality, so you can still tune your Seeds to
+your antique piano.
+
+Decay; When no connection is made to the jack labelled "decay" this knob sets
+the time it takes notes to die out. When there is a cable connected to the
+decay input this knob will attenuate that signal.
+Attack; while shift is held this knob will set the attack time of the internal
+amplitude envelope.
+
+Mod; When no connection is made to the jack labelled "mod" this knob affects
+the timbre (character) of the sound, an effect that varies depending on which
+sound is selected. When there is a cable connected to the mod input this knob
+will attenuate that signal.
+Filter; Adjusts the sustain level of the internal filter. When you'd like to
+use the Seeds as an oscillator with an external filter and VCA then it might
+be a good idea to turn this up. At the max setting the filter won't affect the
+sound.
+
+	Philosophy/Rationale
+
+Probably the most interesting thing about modular synthesizers is how we can
+try new things and get unexpected results. This is especially nice in live
+improvisations, but modular synthesizers can be a bit slow, there. Patching up
+about four or five modules to get a simple melodic sound takes a lot of time
+when you have a musical idea right now; it'd be nice to get a basic sound more
+quickly, that you could then extend. Another question is where one would start
+one's modular; it'd be nice to be able to get a single module that can create
+an interesting sound that any other module could add something useful to. From
+both of those perspectives the Seeds should make sense, at least to some
+people.
+
+On the sound-design side you might notice some 90's popular music influences.
+There are two reasons for that. First of all; those sounds are a natural match
+for the rather modest (8 bit, 16MHz) Atmel chip on the Arduino Nano we're 
+using. That music was made using digital synthesizers using the processors
+available at the time, and those had to make the most of the chips available at
+the time, which were quite comparable to the Nano.  The second reason is that
+those sounds are a lot of fun. Once that link became clear it became more a of
+a guiding principle than a potential problem; it seems more sensible to lean
+into such links than it is to resist them.
+
+	Updates
+
+As the Seeds uses an Arduino (that little board sticking out on the back) it
+can be programmed. New versions of the code will be found at
+https://www.ginkosynthese.com Instructions on how to upload those updates to
+your module can be found at https://www.arduino.cc/en/main/software
+This also means this code is Free Software ("free" as in "liberty"); you can
+read it, you can edit it to change it, or add your own sounds. Under some
+conditions you can even redistribute it.
+
+	Advanced option
+
+Two of the sounds (numbers 2 and 7) feature an internal LFO with adjustable
+speed. That's very convenient for stand-alone usage, but it turns out that
+some people prefer using an external module for more precise control. If
+that's you; near the start of the code in the seeds.ino file, below the
+change-log, you'll find a line that reads;
+#define INTERNAL_LFO
+If you'd change that to;
+//#define INTERNAL_LFO
+, save the file, and upload it your module,you'll enable direct control over
+those sounds. If you change your mind, and decide you liked the internal LFO
+better, you can reverse the edit (removing the slashes), save again, upload
+the code again, and you'll get your LFO back.
+
