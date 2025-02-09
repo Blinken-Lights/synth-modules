@@ -104,7 +104,7 @@ void loop() {
       }else if(swState == 2) {
         // shift in value from channel above it
         // (can loop values if all channel switches are set to 2 = Shift)
-        byte previousChannel = i - 1;
+        int previousChannel = i - 1;
         if(previousChannel < 0){
           previousChannel = 3;
         }
