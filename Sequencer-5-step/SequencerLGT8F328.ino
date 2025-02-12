@@ -115,12 +115,6 @@ void loop() {
 
       scaleRange = (float)rangeSelection / 4.0f;
 
-      Serial.print(analogueReading);
-      Serial.print("\t");
-      Serial.print(chosenScale);
-      Serial.print("\t");
-      Serial.println(rangeSelection);
-
     }else{
 
       notes[readAnaloguePin] = analogueReading >> 4;
@@ -172,7 +166,11 @@ void updateOutputs(){
 
   byte scaleNote = pgm_read_byte(&(scaleNotes[chosenScale][note]));
 
-  while (scaleNote > 59){
+  for(int i = 0; i < 10; i++){
+    
+    if(scaleNote <= 59){
+      break;
+    }
 
     note-=1;
 
