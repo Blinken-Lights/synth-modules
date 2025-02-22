@@ -128,6 +128,10 @@ void reset(){
   for(int i = 0; i < 8; i++){
     beats[i] = 0;
   }
+
+  for(int i = 0; i < 8; i++){
+    digitalWrite(outputs[i], LOW);
+  }
 }
 
 void start(){
