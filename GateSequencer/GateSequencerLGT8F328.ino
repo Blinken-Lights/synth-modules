@@ -1,5 +1,5 @@
-//#define USE_LGT_EEPROM_API
-//#include <EEPROM.h>
+#define USE_LGT_EEPROM_API
+#include <EEPROM.h>
 
 #include <FastLED.h>
 
@@ -31,6 +31,8 @@ byte clockPin = 2;
 byte resetPin = 3;
 byte stopPin = A7;
 byte startPin = A6;
+bool prevClockState = false;
+bool prevResetState = false;
 bool prevStopState = false;
 bool prevStartState = false;
 
@@ -73,53 +75,52 @@ void setup() {
   }
 
   pinMode(clockPin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(clockPin), clock, CHANGE);
+  //attachInterrupt(digitalPinToInterrupt(clockPin), clock, CHANGE);
   pinMode(resetPin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(resetPin), reset, RISING);
+  //attachInterrupt(digitalPinToInterrupt(resetPin), reset, RISING);
   pinMode(stopPin, INPUT);
   pinMode(startPin, INPUT);
 
-  //for(byte i = 0; i < 8; i++){
-  //  patterns[i] = EEPROM.read(i);
-  //}
+  for(byte i = 0; i < 8; i++){
+    patterns[i] = EEPROM.read(i);
+  }
 
   loadPatternToLeds();
 
-  // Seems to stop it crashing??
-  Serial.begin(250000);
-
 }
 
-void clock(){
+void clockRise(){
 
   if(!running){
     return;
   }
 
-  if(digitalRead(clockPin)){
-
-    for(int i = 0; i < 8; i++){
-      beats[i]++;
-      if(beats[i] >= maxBeats[i]){
-        beats[i] = 0;
-      }
-      if(doingFill[i]){
-        digitalWrite(outputs[i], HIGH);
-      }else{
-        digitalWrite(outputs[i], bitRead(patterns[i], beats[i]));
-      }
+  for(int i = 0; i < 8; i++){
+    beats[i]++;
+    if(beats[i] >= maxBeats[i]){
+      beats[i] = 0;
     }
-
-    if(view == 0){
-      loadPatternToLeds();
+    if(doingFill[i]){
+      digitalWrite(outputs[i], HIGH);
+    }else{
+      digitalWrite(outputs[i], bitRead(patterns[i], beats[i]));
     }
+  }
 
-  }else{
+  if(view == 0){
+    loadPatternToLeds();
+  }
 
-    for(int i = 0; i < 8; i++){
-      digitalWrite(outputs[i], LOW);
-    }
+}
 
+void clockFall(){
+
+  if(!running){
+    return;
+  }
+  
+  for(int i = 0; i < 8; i++){
+    digitalWrite(outputs[i], LOW);
   }
 
 }
@@ -143,6 +144,20 @@ void stop(){
 }
 
 void loop() {
+
+  bool resetState = digitalRead(resetPin);
+  if(resetState && !prevResetState){
+    reset();
+  }
+  prevResetState = resetState;
+
+  bool clockState = digitalRead(clockPin);
+  if(clockState && !prevClockState){
+    clockRise();
+  }else if(!clockState && prevClockState){
+    clockFall();
+  }
+  prevClockState = clockState;
 
   bool startState = digitalRead(startPin);
   if(startState && !prevStartState){
@@ -190,7 +205,7 @@ void loop() {
           bitWrite(patterns[editingChannel], choiceNumber, !bitRead(patterns[editingChannel], choiceNumber));
         }
         loadPatternToLeds();
-        //EEPROM.write(editingChannel, patterns[editingChannel]);
+        EEPROM.write(editingChannel, patterns[editingChannel]);
       }
     }
 
